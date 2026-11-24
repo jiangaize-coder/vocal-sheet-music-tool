@@ -2,25 +2,31 @@
 
 唱明白工作室出品
 
-本地 100% 离线运行的声乐教学乐谱与练唱音频工具包：音频转简谱/五线谱、简谱转人声唱音与钢琴示范、双声部陪唱混音、竖版 A4 少儿大字简谱打印。
+一句话：本地离线工具。
+
+音频转简谱，简谱转人声和钢琴示范，打印少儿大字谱。不联网。
 
 ## 功能
 
-四条主链路，共用同一套简谱领域模型（`Score → Part → Measure → BeatGroup → NoteToken`）：
+四条链路，都过同一套简谱模型（`Score → Part → Measure → BeatGroup → NoteToken`）：
 
-1. **音频转谱**（`transcribe`）：音频/视频或公开非加密链接 → 可选 Demucs 人声分离 → Basic Pitch 转 MIDI → 节拍对齐、调性分析、和弦识别、音值组合规整 → MusicXML、五线谱 SVG、简谱打印 PDF、MIDI、Score JSON。
-2. **图片识谱**（`omr`）：简谱图片 → Dolce 粗识别 → 碎片像素精修 → 拍值约束求解与音值组合重组 → 可复核的 Score JSON、复核报告、打印稿。只接受图片，不接受 PDF。
-3. **简谱转音频**（`synth`）：简谱文本或 Score JSON → 离线合成人声唱音（`ah`/`oo` 共振峰 + 颤音）与钢琴示范 → MP3 + MIDI；双声部可出独唱、合唱、练唱版。
+1. **音频转谱**（`transcribe`）：音频、视频或公开链接 → 可选 Demucs 分离人声 → Basic Pitch 转 MIDI → 节拍对齐、调性分析、和弦识别、音值组合规整 → MusicXML、五线谱 SVG、简谱打印 PDF、MIDI、Score JSON。
+2. **图片识谱**（`omr`）：简谱图片 → Dolce 粗识别 → 碎片精修 → 拍值约束求解和音值组合重组 → Score JSON、复核报告、打印稿。只认图片，不认 PDF。
+3. **简谱转音频**（`synth`）：简谱文本或 Score JSON → 离线合成人声唱音（`ah`/`oo` 共振峰 + 颤音）和钢琴示范 → MP3 和 MIDI。双声部能出独唱、合唱、练唱版。
 4. **简谱排版**（`engrave`）：Score JSON 或简谱文本 → 竖版 A4 少儿大字打印 PDF（单声部分谱、合订本、双声部总谱）。
 
-另有 `theory-check`（音值组合、音域、曲式、和弦四大体检）、`normalize`（按音值组合法规整 + 无损移调）、`verify`（14 项确定性端到端自检）。
+另外三个命令：
+
+- `theory-check`：乐理体检，查四项：音值组合、音域、曲式、和弦。
+- `normalize`：按音值组合法规整乐谱，可选移调（无损）。
+- `verify`：14 项端到端自检。
 
 ## 运行环境
 
-- macOS Apple Silicon（主要验证平台；Linux 可用，字体见环境变量）
-- Python 3.11 + 虚拟环境（建议 `python3.11 -m venv .venv`）
-- ffmpeg（转码与 MP3 导出）
-- Dolce `omr-cli`（仅图片识谱需要，**不随本工具发布**，需另行安装：https://github.com/lodebar2026/dolce ，或用 `--recognizer` / `DOLCE_OMR_CLI` 指定本机程序路径）
+- macOS Apple Silicon。主验证平台。Linux 能用，字体见环境变量。
+- Python 3.11 + 虚拟环境（`python3.11 -m venv .venv`）。
+- ffmpeg。转码和 MP3 导出要用。
+- Dolce `omr-cli`。只有图片识谱要。**不随本工具发布**，自己装：https://github.com/lodebar2026/dolce 。也可以用 `--recognizer` 或 `DOLCE_OMR_CLI` 指本机路径。
 
 ## 安装
 
@@ -35,7 +41,9 @@ brew install ffmpeg        # macOS；Linux 请用系统包管理器
 
 ## 用法
 
-入口是 `score_tool.py`（自动找解释器，见环境变量一节），也可直接用虚拟环境的 Python 跑 `cli.py`。
+入口是 `score_tool.py`。它自己找解释器，见环境变量一节。
+
+也可以直接用虚拟环境的 Python 跑 `cli.py`。
 
 ```sh
 # 1. 运行端到端自检（14 项）
@@ -93,9 +101,9 @@ python3 score_tool.py engrave /path/to/校订.score.json \
 | 文件 | 职责 |
 |---|---|
 | `score_tool.py` | 启动器：找解释器并转发参数给 `cli.py` |
-| `cli.py` | 统一子命令入口（`transcribe` / `omr` / `synth` / `engrave` / `theory-check` / `normalize` / `verify`），退出码 0/2/3 |
-| `domain.py` | 唯一强类型领域模型 + 简谱文本解析 + JSON 序列化 + `validate()` 校验 |
-| `theory.py` | 音值组合法、音域体检、无损移调、曲式分段、拍级和弦识别 |
+| `cli.py` | 七个子命令的入口（`transcribe` / `omr` / `synth` / `engrave` / `theory-check` / `normalize` / `verify`），退出码 0/2/3 |
+| `domain.py` | 唯一的简谱模型：文本解析、JSON 读写、`validate()` 校验 |
+| `theory.py` | 音值组合、音域体检、无损移调、曲式分段、拍级和弦识别 |
 | `transcribe.py` | 音频 → WAV → 可选 Demucs 人声分离 → Basic Pitch → MIDI → 节拍对齐 → MusicXML + 五线谱 SVG + Score JSON |
 | `omr.py` + `omr_fragments.py` | 图片识谱：调外部 Dolce 粗识别 → 碎片像素精修 → 拍值约束求解 |
 | `synth.py` | 纯 numpy/scipy 合成（人声共振峰 + 颤音、钢琴泛音）+ 双声部混音 + MIDI 导出 + ffmpeg 转 MP3 |
@@ -106,15 +114,17 @@ python3 score_tool.py engrave /path/to/校订.score.json \
 
 ## 已知限制
 
-- **转调**：简谱文本解析目前只认第一个调号（`1=`），小节级转调需走 Score JSON 的 `Measure.key`；音频转谱全曲只定一个调。转调曲目请人工核对转调后的小节。
-- **图片识谱**：只接受图片（PNG/JPG），不接受 PDF；识别本身依赖外部 Dolce，高八度点、调号判定以复核报告为准，正式导出前请人工确认 Score。
-- **声部**：合成只取前两个声部，第三个及以上声部会被忽略；识谱入口支持一或二声部。
-- **和弦**：只认大小三和弦，不认七和弦；BPM 钳制在 50–180。
-- **静默处理**：超出 MIDI 36–96 的音会被钳制；无法解析的 token 会被跳过；末小节不足会补休止垫满——请以 `verify` 与复核报告为准。
+- **转调**：文本解析只认第一个调号（`1=`）。转调要写进 Score JSON 的 `Measure.key`。音频转谱全曲只定一个调。转调的曲子，转调后的小节请人工核对。
+- **图片识谱**：只认图片（PNG/JPG），不认 PDF。识别靠外部 Dolce。高八度点和调号以复核报告为准，正式导出前请人工确认 Score。
+- **声部**：合成只取前两个声部，第三个及以上的会被忽略。识谱入口支持一或二声部。
+- **和弦**：只认大小三和弦，不认七和弦。BPM 钳制在 50–180。
+- **静默处理**：超出 MIDI 36–96 的音会被钳制。无法解析的 token 会被跳过。末小节不足会补休止垫满。以 `verify` 和复核报告为准。
 
 ## 许可证
 
 本仓库采用 Apache License 2.0（见 LICENSE 文件）。
+
+版权归上海万韵有熠文化咨询有限公司。
 
 第三方依赖许可（摘要，以各项目官方声明为准）：
 
