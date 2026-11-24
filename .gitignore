@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Tool outputs (created by transcribe / omr / synth / engrave)
+score_out/
+omr_out/
+audio_out/
+pdf_out/
+score_output/
+audio_output/
+*.score.json
+
+# macOS / editors
+.DS_Store
+.idea/
+.vscode/
+*.swp

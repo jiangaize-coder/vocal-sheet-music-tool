@@ -1,0 +1,16 @@
+# Direct dependencies of 声乐乐谱工具
+# Pinned from the reference venv (Python 3.11, macOS arm64, 2026-11-24).
+# yt-dlp is used as an external binary (Homebrew 2026.10.26 on the reference
+# machine); the same version is published on PyPI.
+numpy==2.4.6
+scipy==1.17.1
+librosa==0.11.0
+music21==10.5.2
+pretty_midi==0.2.11.post0
+soundfile==0.14.0
+Pillow==13.0.0
+reportlab==5.1.0
+verovio==6.4.1
+basic-pitch==0.4.0
+demucs==4.1.0
+yt-dlp==2026.10.26
