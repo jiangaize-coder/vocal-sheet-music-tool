@@ -27,13 +27,24 @@ from reportlab.pdfgen import canvas
 
 from domain import BeatGroup, Measure, NoteToken, Part, Score, parse_key_tonic_midi, timed_tokens
 
-# Locked typography constants (single source of truth; uniform across every bar & rest '0')
+# Locked typography constants (single source of truth).
+# Melody slots are uniform (12.8 pt); a rest '0' inside an all-rest measure
+# uses REST_TOKEN_WIDTH so rest-only bars pack tighter (compact rest layout).
+# The '0' glyph is 7.84 pt in RoundNum at 13.2 pt, so 8.5 pt keeps adjacent
+# rests separated. Melody measures are untouched.
 PDF_NUM_FONT_SIZE = 13.2
 PDF_LYRIC_SIZE = 10.2
 AUGMENT_DASH_WIDTH = 11.0
 BAR_PADDING = 23.0
 BEAT_GAP = 4.0
 USABLE_WIDTH = A4[0] - 68.0 - 44.0
+REST_TOKEN_WIDTH = 8.5
+
+
+def is_all_rest_measure(measure: Measure) -> bool:
+    """True when every token in the measure is a rest '0' (no notes, no dashes)."""
+    tokens = measure.all_tokens()
+    return bool(tokens) and all(t.degree == "0" for t in tokens)
 
 
 def register_fonts() -> Tuple[str, str]:
@@ -108,27 +119,36 @@ def modulation_banner_text(badge_note: str, old_key: str = "") -> str:
     return f"转 1={new_label}（前1=后{degree}）"
 
 
-def token_width(token: NoteToken, lyric_font: str) -> float:
+def token_width(token: NoteToken, lyric_font: str, rest_compact: bool = False) -> float:
     lyric_width = max(
         (pdfmetrics.stringWidth(text, lyric_font, PDF_LYRIC_SIZE) for text in token.lyrics[:2]),
         default=0.0,
     )
-    glyph = AUGMENT_DASH_WIDTH + 4 if token.is_dash else (17.0 if token.accidental_mark else 12.8)
+    if token.is_dash:
+        glyph = AUGMENT_DASH_WIDTH + 4
+    elif rest_compact and token.degree == "0":
+        glyph = REST_TOKEN_WIDTH
+    elif token.accidental_mark:
+        glyph = 17.0
+    else:
+        glyph = 12.8
     return max(glyph, lyric_width + 4.0)
 
 
-def group_width(group: BeatGroup, lyric_font: str) -> float:
-    return sum(token_width(token, lyric_font) for token in group.tokens)
+def group_width(group: BeatGroup, lyric_font: str, rest_compact: bool = False) -> float:
+    return sum(token_width(token, lyric_font, rest_compact) for token in group.tokens)
 
 
 def measure_width(measure: Measure, lyric_font: str) -> float:
+    compact = is_all_rest_measure(measure)
     return BAR_PADDING + BEAT_GAP * max(0, len(measure.beats) - 1) + sum(
-        group_width(group, lyric_font) for group in measure.beats
+        group_width(group, lyric_font, compact) for group in measure.beats
     )
 
 
-def compute_beat_xs(bx: float, bw: float, group: BeatGroup, lyric_font: str) -> Tuple[List[float], List[float]]:
-    minimums = [token_width(token, lyric_font) for token in group.tokens]
+def compute_beat_xs(bx: float, bw: float, group: BeatGroup, lyric_font: str,
+                    rest_compact: bool = False) -> Tuple[List[float], List[float]]:
+    minimums = [token_width(token, lyric_font, rest_compact) for token in group.tokens]
     if not minimums:
         return [], []
     extra_per_note = max(0.0, bw - sum(minimums)) / len(minimums)
@@ -460,13 +480,14 @@ def draw_part_pdf_pages(
                 pad_l = 12.0 if (m.repeat_start and m.number != first_m.number) else 7.5
                 pad_r = 10.0 if m.repeat_end else 7.5
                 inner_w = bar_w - pad_l - pad_r - BEAT_GAP * max(0, n_beats - 1)
-                beat_minimums = [group_width(bg, cjk_font) for bg in m.beats]
+                rest_compact = is_all_rest_measure(m)
+                beat_minimums = [group_width(bg, cjk_font, rest_compact) for bg in m.beats]
                 extra_per_beat = (inner_w - sum(beat_minimums)) / max(1, n_beats)
                 bx = x0 + pad_l
                 measure_xs, measure_widths = [], []
                 for bg, minimum in zip(m.beats, beat_minimums):
                     bw = minimum + extra_per_beat
-                    xs, slot_ws = compute_beat_xs(bx, bw, bg, cjk_font)
+                    xs, slot_ws = compute_beat_xs(bx, bw, bg, cjk_font, rest_compact)
                     bx += bw + BEAT_GAP
                     measure_xs.extend(xs)
                     measure_widths.extend(slot_ws)

@@ -10,8 +10,8 @@ from reportlab.pdfgen.canvas import Canvas
 
 from domain import Measure, Score, timed_tokens
 from engrave import (
-    AUGMENT_DASH_WIDTH, PDF_LYRIC_SIZE, PDF_NUM_FONT_SIZE, draw_boxed_bar_number, draw_jianpu_token,
-    draw_measure_beams, draw_tuplet, register_fonts,
+    AUGMENT_DASH_WIDTH, PDF_LYRIC_SIZE, PDF_NUM_FONT_SIZE, REST_TOKEN_WIDTH, draw_boxed_bar_number,
+    draw_jianpu_token, draw_measure_beams, draw_tuplet, is_all_rest_measure, register_fonts,
 )
 
 LEFT = 52.0
@@ -29,10 +29,20 @@ def system_plan(rows, lyric_font: str, lyric_size: float = PDF_LYRIC_SIZE, num_s
     for upper, lower in zip(*rows):
         widths = {}
         for measure in (upper, lower):
+            # Same compact-rest rule as engrave.token_width: a rest '0' inside an
+            # all-rest measure takes REST_TOKEN_WIDTH instead of the uniform slot.
+            compact = is_all_rest_measure(measure)
             for beat, _, token in timed_tokens(measure.all_tokens()):
                 lyric = max((stringWidth(t, lyric_font, lyric_size) for t in token.lyrics[:2]), default=0)
                 dots = int(token.dotted) if token.dots is None else token.dots
-                glyph = AUGMENT_DASH_WIDTH + 4 if token.is_dash else (15.0 * scale if token.accidental else 10.5 * scale)
+                if token.is_dash:
+                    glyph = AUGMENT_DASH_WIDTH + 4
+                elif compact and token.degree == "0":
+                    glyph = REST_TOKEN_WIDTH * scale
+                elif token.accidental:
+                    glyph = 15.0 * scale
+                else:
+                    glyph = 10.5 * scale
                 minimum = max(glyph + 3.5 * max(dots - 1, 0), lyric + 2.2)
                 widths[beat] = max(widths.get(beat, 0), minimum)
         columns.append(sorted(widths.items()))
